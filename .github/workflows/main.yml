@@ -1,18 +1,27 @@
----
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main  # Run the workflow when code is pushed to the `main` branch
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
+
       - name: Install SSH Key
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
       - name: Deploy to EC2
         run: >
           ssh -o StrictHostKeyChecking=no ec2-user@3.85.32.166 << EOF
@@ -24,19 +33,4 @@ jobs:
             echo "VITE_AZURE_COSMOS_ENDPOINT=${{ secrets.VITE_AZURE_COSMOS_ENDPOINT }}" >> .env
             echo "VITE_AZURE_COSMOS_KEY=${{ secrets.VITE_AZURE_COSMOS_KEY }}" >> .env
 
-            # Pull the latest code and install dependencies
-            git pull origin main || (git clone https://github.com/satyapadamati/DoToList-AzureDevOps.git .)
-            npm install
-
-            # Build frontend and backend
-            cd client
-            npm install
-            npm run build
-            cd ..
-
-            npm run build
-
-            # Start the application
-            pm2 stop all || true
-            pm2 start dist/index.js --name todo-app
-          EOF
+            # Pull the latest code and install dependencie
