@@ -26,12 +26,11 @@ jobs:
       run: |
         echo "web: npm run dev" > Procfile  # Use `npm run dev` as the startup command
 
-    - name: Install Elastic Beanstalk CLI
+    - name: Install AWS Elastic Beanstalk CLI
       run: |
-        curl -o "ebcli.zip" https://d1vvhvl2y92vvt.cloudfront.net/aws-elasticbeanstalk-cli-linux.zip
-        unzip ebcli.zip -d /tmp/ebcli
-        sudo /tmp/ebcli/ebcli-installer.py
-        export PATH=$PATH:/usr/local/bin
+        sudo apt-get update
+        sudo apt-get install -y python3-pip
+        sudo pip3 install awsebcli
 
     - name: Build project
       run: npm run build  # Optional, depending on your setup
