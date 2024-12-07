@@ -24,7 +24,7 @@ jobs:
 
       - name: Deploy to EC2
         run: >
-          ssh -o StrictHostKeyChecking=no ec2-user@3.85.32.166 << EOF
+          ssh -o StrictHostKeyChecking=no ubuntu@3.85.32.166 << EOF
             # Navigate to the project directory
             cd /var/www/todo-app || (mkdir -p /var/www/todo-app && cd /var/www/todo-app)
 
