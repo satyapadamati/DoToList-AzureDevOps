@@ -1,36 +1,34 @@
-name: Deploy to AWS EC2
+name: Deploy to Elastic Beanstalk
 
 on:
   push:
     branches:
-      - master  # Run the workflow when code is pushed to the `main` branch
+      - master  # Adjust the branch name as per your workflow
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+    - name: Install dependencies
+      run: npm install
 
-      - name: Install SSH Key
-        uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+    - name: Build application
+      run: npm run build  # Adjust if your app doesn't have a build step
 
-      - name: Deploy to EC2
-        run: >
-          ssh -o StrictHostKeyChecking=no ubuntu@3.85.32.166 << EOF
-            # Navigate to the project directory
-            cd /var/www/todo-app || (mkdir -p /var/www/todo-app && cd /var/www/todo-app)
+    - name: Zip application
+      run: zip -r app.zip . -x ".git/*"
 
-            # Write environment variables to the .env file
-            echo "VITE_AZURE_COSMOS_DATABASE_ID=${{ secrets.VITE_AZURE_COSMOS_DATABASE_ID }}" >> .env
-            echo "VITE_AZURE_COSMOS_ENDPOINT=${{ secrets.VITE_AZURE_COSMOS_ENDPOINT }}" >> .env
-            echo "VITE_AZURE_COSMOS_KEY=${{ secrets.VITE_AZURE_COSMOS_KEY }}" >> .env
-
-            # Pull the latest code and install dependencie
+    - name: Deploy to Elastic Beanstalk
+      uses: einaregilsson/beanstalk-deploy@v20
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name: todo
+        environment_name: ${{ secrets.EB_ENV_NAME }}
+        region: ${{ secrets.AWS_REGION }}
+        version_label: "v${{ github.run_number }}"
+        deployment_package: app.zip
