@@ -46,8 +46,13 @@ jobs:
         # Initialize Elastic Beanstalk with Node.js platform
         eb init -p node.js --region $AWS_REGION
 
-        # Create the environment if it doesn't exist
-        eb create $ENVIRONMENT_NAME --region $AWS_REGION
+        # Check if the environment exists
+        if ! eb list | grep -q "$ENVIRONMENT_NAME"; then
+          echo "Environment $ENVIRONMENT_NAME does not exist. Creating new environment..."
+          eb create $ENVIRONMENT_NAME --region $AWS_REGION
+        else
+          echo "Environment $ENVIRONMENT_NAME already exists. Skipping environment creation."
+        fi
 
         # Deploy the application
         eb use $ENVIRONMENT_NAME
