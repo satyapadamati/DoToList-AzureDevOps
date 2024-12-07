@@ -3,7 +3,7 @@ name: Deploy to Elastic Beanstalk
 on:
   push:
     branches:
-      - master  # Trigger on push to the main branch
+      - master
 
 jobs:
   deploy:
@@ -16,7 +16,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '18'  # Set to the Node version you are using
+        node-version: '18'
 
     - name: Install dependencies
       run: |
@@ -24,7 +24,7 @@ jobs:
 
     - name: Create Procfile for Elastic Beanstalk
       run: |
-        echo "web: npm run dev" > Procfile  # Use `npm run dev` as the startup command
+        echo "web: npm run dev" > Procfile
 
     - name: Install AWS Elastic Beanstalk CLI
       run: |
@@ -33,20 +33,27 @@ jobs:
         sudo pip3 install awsebcli
 
     - name: Build project
-      run: npm run build  # Optional, depending on your setup
+      run: npm run build
 
     - name: Deploy to Elastic Beanstalk
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: 'us-east-2'  # Adjust as necessary
+        AWS_REGION: 'us-east-2'
         APPLICATION_NAME: 'todo'
         ENVIRONMENT_NAME: 'Todo-env'
       run: |
+        # Initialize Elastic Beanstalk with Node.js platform
         eb init -p node.js --region $AWS_REGION
+
+        # Create an application version manually and upload it to S3
+        VERSION_LABEL=$(date +%Y%m%d%H%M%S)
+        eb create --environment-name $ENVIRONMENT_NAME --application-name $APPLICATION_NAME --region $AWS_REGION --version $VERSION_LABEL
+
+        # Deploy the application
         eb use $ENVIRONMENT_NAME
-        eb deploy
+        eb deploy --label $VERSION_LABEL
 
     - name: Clean up
       run: |
-        rm Procfile  # Remove Procfile after deployment
+        rm Procfile
