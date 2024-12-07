@@ -41,19 +41,15 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'us-east-2'
         APPLICATION_NAME: 'todo'
-        ENVIRONMENT_NAME: 'Todo-env'
+        ENVIRONMENT_NAME: 'Todo-env-new'  # New environment name
       run: |
         # Initialize Elastic Beanstalk with Node.js platform
         eb init -p node.js --region $AWS_REGION
 
-        # Check if environment exists
-        eb status $ENVIRONMENT_NAME || {
-          echo "Environment $ENVIRONMENT_NAME does not exist. Creating a new environment."
-          eb create $ENVIRONMENT_NAME --region $AWS_REGION
-        }
+        # Create a new environment (different name)
+        eb create $ENVIRONMENT_NAME --region $AWS_REGION
 
-        # Use the environment and deploy
-        eb use $ENVIRONMENT_NAME
+        # Deploy the application to the newly created environment
         eb deploy
 
     - name: Clean up
