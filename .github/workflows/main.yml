@@ -3,32 +3,44 @@ name: Deploy to Elastic Beanstalk
 on:
   push:
     branches:
-      - master
+      - master  # Trigger on push to the main branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'  # Set to the Node version you are using
 
     - name: Install dependencies
-      run: npm install
+      run: |
+        npm install
 
-    - name: Build application
-      run: npm run build  # Adjust if your app doesn't have a build step
+    - name: Create Procfile for Elastic Beanstalk
+      run: |
+        echo "web: npm run dev" > Procfile  # Use `npm run dev` as the startup command
 
-    - name: Zip application
-      run: zip -r app.zip . -x ".git/*"
+    - name: Build project
+      run: npm run build  # Optional, depending on your setup
 
     - name: Deploy to Elastic Beanstalk
-      uses: einaregilsson/beanstalk-deploy@v20
-      with:
-        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        application_name: ${{ secrets.EB_APP_NAME }}
-        environment_name: ${{ secrets.EB_ENV_NAME }}
-        region: ${{ secrets.AWS_REGION }}
-        version_label: "v${{ github.run_number }}"
-        deployment_package: app.zip
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-east-2'  # Adjust as necessary
+        APPLICATION_NAME: 'todo'
+        ENVIRONMENT_NAME: 'Todo-env'
+      run: |
+        eb init -p node.js --region $AWS_REGION
+        eb use $ENVIRONMENT_NAME
+        eb deploy
+
+    - name: Clean up
+      run: |
+        rm Procfile  # Remove Procfile after deployment
