@@ -1,12 +1,15 @@
-name: Deploy to Elastic Beanstalk
+name: Build and Deploy to AWS Elastic Beanstalk
 
 on:
   push:
     branches:
-      - master # Replace with the branch you want to trigger deployments from
+      - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,42 +17,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Set up Node.js
+      # Step 2: Set up Node.js environment
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18' # Specify your Node.js version
+          node-version: '18'  # Use the appropriate Node.js version
           cache: 'npm'
 
-      # Step 3: Install dependencies and build the React app
+      # Step 3: Install dependencies
       - name: Install dependencies
-        run: |
-          npm install
+        run: npm install
 
+      # Step 4: Build the React app
       - name: Build React app
-        run: |
-          npm run build
-        working-directory: ./DoToList-AzureDevOps # Change this if your React app is in a different directory
+        run: npm run build
 
-      # Step 4: Package the application
-      - name: Zip the application
-        run: |
-          zip -r application.zip . -x "**/node_modules/**" "**/DoToList-AzureDevOps/node_modules/**" "**/.*"
-        
       # Step 5: Deploy to Elastic Beanstalk
       - name: Deploy to Elastic Beanstalk
-        uses: einaregilsson/beanstalk-deploy@v21
-        with:
-          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          region: ${{ secrets.AWS_REGION }}
-          application_name: ${{ secrets.EB_APP_NAME }}
-          environment_name: ${{ secrets.EB_ENV_NAME }}
-          version_label: ${{ github.run_number }}
-          deployment_package: application.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          EB_APP_NAME: ${{ secrets.EB_APP_NAME }}
+          EB_ENV_NAME: ${{ secrets.EB_ENV_NAME }}
+        run: |
+          # Package the build and deploy to Elastic Beanstalk
+          zip -r deploy.zip . # Zip the whole project, excluding node_modules
+          aws elasticbeanstalk create-application-version --application-name $EB_APP_NAME --version-label $GITHUB_SHA --source-bundle S3Bucket=$AWS_S3_BUCKET,S3Key=deploy.zip
+          aws elasticbeanstalk update-environment --environment-name $EB_ENV_NAME --version-label $GITHUB_SHA
 
-      # Step 6: Notify if deployment is successful
-      - name: Deployment success
-        if: ${{ success() }}
-        run: echo "Application successfully deployed to Elastic Beanstalk!"
-
+      # Optional: Clean up any old versions (if needed)
+      - name: Clean up old versions
+        run: |
+          aws elasticbeanstalk delete-application-version --application-name $EB_APP_NAME --version-label $(aws elasticbeanstalk describe-application-versions --application-name $EB_APP_NAME --query "ApplicationVersions[?VersionLabel!='${GITHUB_SHA}'].VersionLabel" --output text | head -n 1) --delete
