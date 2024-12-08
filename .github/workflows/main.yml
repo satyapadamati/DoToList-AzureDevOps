@@ -3,55 +3,53 @@ name: Deploy to Elastic Beanstalk
 on:
   push:
     branches:
-      - master
+      - master # Replace with the branch you want to trigger deployments from
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Specify your Node.js version
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: |
-        npm install
+      # Step 3: Install dependencies and build the React app
+      - name: Install dependencies
+        run: |
+          npm install
 
-    - name: Create Procfile for Elastic Beanstalk
-      run: |
-        echo "web: npm run dev" > Procfile
+      - name: Build React app
+        run: |
+          npm run build
+        working-directory: ./DoToList-AzureDevOps # Change this if your React app is in a different directory
 
-    - name: Install AWS Elastic Beanstalk CLI
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y python3-pip
-        sudo pip3 install awsebcli
+      # Step 4: Package the application
+      - name: Zip the application
+        run: |
+          zip -r application.zip . -x "**/node_modules/**" "**/DoToList-AzureDevOps/node_modules/**" "**/.*"
+        
+      # Step 5: Deploy to Elastic Beanstalk
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: ${{ secrets.AWS_REGION }}
+          application_name: ${{ secrets.EB_APP_NAME }}
+          environment_name: ${{ secrets.EB_ENV_NAME }}
+          version_label: ${{ github.run_number }}
+          deployment_package: application.zip
 
-    - name: Build project
-      run: npm run build
+      # Step 6: Notify if deployment is successful
+      - name: Deployment success
+        if: ${{ success() }}
+        run: echo "Application successfully deployed to Elastic Beanstalk!"
 
-    - name: Deploy to Elastic Beanstalk
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: 'us-east-2'
-        APPLICATION_NAME: 'todo'
-        ENVIRONMENT_NAME: 'Todo-env-new'  # New environment name
-      run: |
-        # Initialize Elastic Beanstalk with Node.js platform
-        eb init -p node.js --region $AWS_REGION
-
-        # Create a new environment (different name)
-        eb create $ENVIRONMENT_NAME --region $AWS_REGION
-
-        # Deploy the application to the newly created environment
-        eb deploy
-
-    - name: Clean up
-      run: |
-        rm Procfile
