@@ -43,18 +43,20 @@ jobs:
           aws s3 cp myapp.zip s3://${{ secrets.AWS_S3_BUCKET }}/myapp.zip
 
       - name: Create Application Version in Elastic Beanstalk
+        id: create_version
         run: |
-          # Create a new application version in Elastic Beanstalk using the uploaded zip file
+          # Generate a unique version label based on date-time
           VERSION_LABEL=$(date +%Y%m%d%H%M%S)
+          # Create the application version
           aws elasticbeanstalk create-application-version \
             --application-name ${{ secrets.EB_APP_NAME }} \
             --version-label $VERSION_LABEL \
             --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET }},S3Key=myapp.zip
+          echo "VERSION_LABEL=$VERSION_LABEL" >> $GITHUB_ENV
 
       - name: Deploy to Elastic Beanstalk
         run: |
-          # Update the Elastic Beanstalk environment with the new application version
-          VERSION_LABEL=$(date +%Y%m%d%H%M%S)
+          # Use the version label from the previous step and deploy to Elastic Beanstalk
           aws elasticbeanstalk update-environment \
             --environment-name ${{ secrets.EB_ENV_NAME }} \
-            --version-label $VERSION_LABEL
+            --version-label ${{ env.VERSION_LABEL }}
