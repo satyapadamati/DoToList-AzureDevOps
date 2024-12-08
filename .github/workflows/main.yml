@@ -3,7 +3,7 @@ name: Deploy to Elastic Beanstalk
 on:
   push:
     branches:
-      - master # Trigger deployment on push to main
+      - master  # Trigger deployment on push to master (or main if that's your default branch)
 
 jobs:
   deploy:
@@ -28,6 +28,7 @@ jobs:
 
       - name: Zip the build folder
         run: |
+          # Ensure the correct folder is zipped (./dist or as per your build output)
           zip -r myapp.zip ./dist
 
       - name: Configure AWS CLI
@@ -38,14 +39,22 @@ jobs:
 
       - name: Upload to S3
         run: |
+          # Upload the zip file to S3 for Elastic Beanstalk deployment
           aws s3 cp myapp.zip s3://${{ secrets.AWS_S3_BUCKET }}/myapp.zip
+
+      - name: Create Application Version in Elastic Beanstalk
+        run: |
+          # Create a new application version in Elastic Beanstalk using the uploaded zip file
+          VERSION_LABEL=$(date +%Y%m%d%H%M%S)
+          aws elasticbeanstalk create-application-version \
+            --application-name ${{ secrets.EB_APP_NAME }} \
+            --version-label $VERSION_LABEL \
+            --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET }},S3Key=myapp.zip
 
       - name: Deploy to Elastic Beanstalk
         run: |
-          aws elasticbeanstalk create-application-version \
-            --application-name ${{ secrets.EB_APP_NAME }} \
-            --version-label $(date +%Y%m%d%H%M%S) \
-            --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET }},S3Key=myapp.zip
+          # Update the Elastic Beanstalk environment with the new application version
+          VERSION_LABEL=$(date +%Y%m%d%H%M%S)
           aws elasticbeanstalk update-environment \
             --environment-name ${{ secrets.EB_ENV_NAME }} \
-            --version-label $(date +%Y%m%d%H%M%S)
+            --version-label $VERSION_LABEL
