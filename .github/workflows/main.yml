@@ -28,7 +28,7 @@ jobs:
 
       - name: Zip the build folder
         run: |
-          zip -r myapp.zip ./build
+          zip -r myapp.zip ./dist
 
       - name: Configure AWS CLI
         run: |
